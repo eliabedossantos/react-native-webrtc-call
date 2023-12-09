@@ -29,116 +29,43 @@ import InCallManager from 'react-native-incall-manager';
 
 export default function App({}) {
   const [localStream, setLocalStream] = useState(null);
-
   const [remoteStream, setRemoteStream] = useState(null);
-
   const [type, setType] = useState('JOIN');
-
-  const [callerId] = useState(
-    Math.floor(100000 + Math.random() * 900000).toString(),
-  );
-
-  
-  const [localMicOn, setlocalMicOn] = useState(true);
-
-  const [localWebcamOn, setlocalWebcamOn] = useState(true);
-
+  const [callerId] = useState(Math.floor(100000 + Math.random() * 900000).toString());
+  const [localMicOn, setLocalMicOn] = useState(true);
   const otherUserId = useRef(null);
-
-//  ngrok http 3500
-  const socket = SocketIOClient('https://0f2c-2804-29b8-51aa-62e-551f-6a5d-789f-3227.ngrok-free.app', {
+  
+  const socket = SocketIOClient('http://192.168.0.10:3500', {
     transports: ['websocket'],
     query: {
       callerId,
     },
   });
-  // const socket = SocketIOClient('http://192.168.56.1:3500', {
-  //   transports: ['websocket'],
-  //   query: {
-  //     callerId,
-  //   },
-  // });
-
-  const peerConnection = useRef(
-    new RTCPeerConnection({
-      iceServers: [],
-      // iceServers: [
-      //   {
-      //     urls: 'stun:stun.l.google.com:19302',
-      //   },
-      //   {
-      //     urls: 'stun:stun1.l.google.com:19302',
-      //   },
-      //   {
-      //     urls: 'stun:stun2.l.google.com:19302',
-      //   },
-      // ],
-    }),
-  );
-
+  
+  const peerConnection = useRef(new RTCPeerConnection({
+    iceServers: [],
+  }));
+  
   let remoteRTCMessage = useRef(null);
-
+  
   useEffect(() => {
-    const fetchTurnServerCredentials = async () => {
-      try {
-        const response = await fetch("https://elidev.metered.live/api/v1/turn/credentials?apiKey=2c55a049edebd789220c33e4c9edf0b2161f");
-        const iceServers = await response.json();
-        console.log("Credenciais do servidor TURN obtidas com sucesso:", iceServers);
-        return iceServers;
-      } catch (error) {
-        console.error("Erro ao obter credenciais do servidor TURN:", error);
-        throw error;
-      }
-    };
-
     const initializePeerConnection = async () => {
       try {
-        const iceServers = await fetchTurnServerCredentials();
-
         const newPeerConnection = new RTCPeerConnection({
-          iceServers: iceServers,
+          iceServers: [],
         });
-
+  
         peerConnection.current = newPeerConnection;
-
-        mediaDevices.enumerateDevices().then(sourceInfos => {
-          let videoSourceId;
-          for (let i = 0; i < sourceInfos.length; i++) {
-            const sourceInfo = sourceInfos[i];
-            if (
-              sourceInfo.kind == 'videoinput' &&
-              sourceInfo.facing == 'user'
-            ) {
-              videoSourceId = sourceInfo.deviceId;
-            }
-          }
-
-          mediaDevices
-            .getUserMedia({
-              audio: true,
-              video: {
-                mandatory: {
-                  minWidth: 500,
-                  minHeight: 300,
-                  minFrameRate: 30,
-                },
-                facingMode: 'user',
-                optional: videoSourceId ? [{ sourceId: videoSourceId }] : [],
-              },
-            })
-            .then(stream => {
-              setLocalStream(stream);
-              peerConnection.current.addStream(stream);
-            })
-            .catch(error => {
-              console.error("Erro ao obter stream de mídia:", error);
-            });
-        });
-
+  
+        const stream = await mediaDevices.getUserMedia({ audio: true });
+  
+        setLocalStream(stream);
+        peerConnection.current.addStream(stream);
+  
         peerConnection.current.onaddstream = event => {
           setRemoteStream(event.stream);
         };
-
+  
         peerConnection.current.onicecandidate = event => {
           if (event.candidate) {
             sendICEcandidate({
@@ -157,15 +84,15 @@ export default function App({}) {
         console.error("Erro ao inicializar a conexão peer:", error);
       }
     };
-
+  
     initializePeerConnection();
-
+  
     socket.on('newCall', data => {
       remoteRTCMessage.current = data.rtcMessage;
       otherUserId.current = data.callerId;
       setType('INCOMING_CALL');
     });
-
+  
     socket.on('callAnswered', data => {
       remoteRTCMessage.current = data.rtcMessage;
       peerConnection.current.setRemoteDescription(
@@ -173,10 +100,10 @@ export default function App({}) {
       );
       setType('WEBRTC_ROOM');
     });
-
+  
     socket.on('ICEcandidate', data => {
       let message = data.rtcMessage;
-
+  
       if (peerConnection.current) {
         peerConnection?.current
           .addIceCandidate(
@@ -194,28 +121,28 @@ export default function App({}) {
           });
       }
     });
-
+  
     return () => {
       socket.off('newCall');
       socket.off('callAnswered');
       socket.off('ICEcandidate');
     };
   }, []);
-
+  
   useEffect(() => {
     InCallManager.start();
     InCallManager.setKeepScreenOn(true);
     InCallManager.setForceSpeakerphoneOn(true);
-
+  
     return () => {
       InCallManager.stop();
     };
   }, []);
-
+  
   function sendICEcandidate(data) {
     socket.emit('ICEcandidate', data);
   }
-
+  
   async function processCall() {
     const sessionDescription = await peerConnection.current.createOffer();
     await peerConnection.current.setLocalDescription(sessionDescription);
@@ -224,7 +151,7 @@ export default function App({}) {
       rtcMessage: sessionDescription,
     });
   }
-
+  
   async function processAccept() {
     peerConnection.current.setRemoteDescription(
       new RTCSessionDescription(remoteRTCMessage.current),
@@ -236,13 +163,26 @@ export default function App({}) {
       rtcMessage: sessionDescription,
     });
   }
-
+  
   function answerCall(data) {
     socket.emit('answerCall', data);
   }
-
+  
   function sendCall(data) {
     socket.emit('call', data);
+  }
+  
+  function toggleMic() {
+    setLocalMicOn(prevState => !prevState);
+    localStream.getAudioTracks().forEach(track => {
+      track.enabled = !localMicOn;
+    });
+  }
+  
+  function leave() {
+    peerConnection.current.close();
+    setLocalStream(null);
+    setType('JOIN');
   }
 
   const JoinScreen = () => {
@@ -448,21 +388,8 @@ export default function App({}) {
     );
   };
 
-  function switchCamera() {
-    localStream.getVideoTracks().forEach(track => {
-      track._switchCamera();
-    });
-  }
-
-  function toggleCamera() {
-    localWebcamOn ? setlocalWebcamOn(false) : setlocalWebcamOn(true);
-    localStream.getVideoTracks().forEach(track => {
-      localWebcamOn ? (track.enabled = false) : (track.enabled = true);
-    });
-  }
-
   function toggleMic() {
-    localMicOn ? setlocalMicOn(false) : setlocalMicOn(true);
+    localMicOn ? setLocalMicOn(false) : setLocalMicOn(true);
     localStream.getAudioTracks().forEach(track => {
       localMicOn ? (track.enabled = false) : (track.enabled = true);
     });
@@ -483,7 +410,7 @@ export default function App({}) {
           paddingHorizontal: 12,
           paddingVertical: 12,
         }}>
-        {localStream ? (
+        {/* {localStream ? (
           <RTCView
             objectFit={'cover'}
             style={{flex: 1, backgroundColor: '#050A0E'}}
@@ -500,7 +427,23 @@ export default function App({}) {
             }}
             streamURL={remoteStream.toURL()}
           />
-        ) : null}
+        ) : null} */}
+        <View 
+          style={{
+            flex: 1,
+            backgroundColor: '#050A0E',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
+          <Text
+            style={{
+              fontSize: 36,
+              marginTop: 12,
+              color: '#ffff',
+            }}>
+            {otherUserId.current}
+          </Text>
+        </View>
         <View
           style={{
             marginVertical: 12,
@@ -533,7 +476,7 @@ export default function App({}) {
               );
             }}
           />
-          <IconContainer
+          {/* <IconContainer
             style={{
               borderWidth: 1.5,
               borderColor: '#2B3034',
@@ -549,8 +492,8 @@ export default function App({}) {
                 <VideoOff height={36} width={36} fill="#1D2939" />
               );
             }}
-          />
-          <IconContainer
+          /> */}
+          {/* <IconContainer
             style={{
               borderWidth: 1.5,
               borderColor: '#2B3034',
@@ -562,7 +505,7 @@ export default function App({}) {
             Icon={() => {
               return <CameraSwitch height={24} width={24} fill="#FFF" />;
             }}
-          />
+          /> */}
         </View>
       </View>
     );
