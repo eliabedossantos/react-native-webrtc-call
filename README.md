@@ -1,5 +1,8 @@
 # WebRTC React Native App with Signalling
 
+This repository contains a React Native application designed for making VoIP (Voice over Internet Protocol) calls between two devices using WebRTC technology. The app comes with a signaling server to facilitate real-time communication. Follow the steps below to set up the server and client components.
+
+
 ### Server Setup
 
 #### Step 1: Go to server folder
