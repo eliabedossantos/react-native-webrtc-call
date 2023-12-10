@@ -364,7 +364,7 @@ export default function App({}) {
           }}>
           <Text
             style={{
-              fontSize: 36,
+              fontSize: 18,
               marginTop: 12,
               color: '#ffff',
             }}>
@@ -432,8 +432,7 @@ export default function App({}) {
                 
               }}
               videoAspectRatio="16:9"
-              // url="rtsp://"
-              source={{ uri: ""}}
+              source={{ uri: "rtsp://"}}
           />
         </View>
         <View
