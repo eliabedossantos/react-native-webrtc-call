@@ -7,6 +7,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import TextInputContainer from './components/TextInputContainer';
 import SocketIOClient from 'socket.io-client';
@@ -30,6 +31,8 @@ import InCallManager from 'react-native-incall-manager';
 export default function App({}) {
   const [localStream, setLocalStream] = useState(null);
 
+  const [invertVideoScreen, setInvertVideoScreen] = useState(false);
+
   const [remoteStream, setRemoteStream] = useState(null);
 
   const [type, setType] = useState('JOIN');
@@ -46,33 +49,16 @@ export default function App({}) {
   const otherUserId = useRef(null);
 
 //  ngrok http 3500
-  const socket = SocketIOClient('https://0f2c-2804-29b8-51aa-62e-551f-6a5d-789f-3227.ngrok-free.app', {
+  const socket = SocketIOClient('https://0b04-2804-29b8-51aa-62e-551f-6a5d-789f-3227.ngrok-free.app', {
     transports: ['websocket'],
     query: {
       callerId,
     },
   });
-  // const socket = SocketIOClient('http://192.168.56.1:3500', {
-  //   transports: ['websocket'],
-  //   query: {
-  //     callerId,
-  //   },
-  // });
 
   const peerConnection = useRef(
     new RTCPeerConnection({
       iceServers: [],
-      // iceServers: [
-      //   {
-      //     urls: 'stun:stun.l.google.com:19302',
-      //   },
-      //   {
-      //     urls: 'stun:stun1.l.google.com:19302',
-      //   },
-      //   {
-      //     urls: 'stun:stun2.l.google.com:19302',
-      //   },
-      // ],
     }),
   );
 
@@ -482,24 +468,36 @@ export default function App({}) {
           backgroundColor: '#050A0E',
           paddingHorizontal: 12,
           paddingVertical: 12,
+          position: 'relative',
         }}>
         {localStream ? (
           <RTCView
             objectFit={'cover'}
             style={{flex: 1, backgroundColor: '#050A0E'}}
-            streamURL={localStream.toURL()}
+            streamURL={invertVideoScreen ? remoteStream?.toURL() : localStream?.toURL()}
           />
         ) : null}
         {remoteStream ? (
-          <RTCView
-            objectFit={'cover'}
-            style={{
-              flex: 1,
-              backgroundColor: '#050A0E',
-              marginTop: 8,
-            }}
-            streamURL={remoteStream.toURL()}
-          />
+          <TouchableWithoutFeedback
+            onPress={() => {
+              setInvertVideoScreen(!invertVideoScreen);
+            }}>
+              <RTCView
+                objectFit={'contain'}
+                style={{
+                  // backgroundColor: '#050A0E',
+                  marginTop: 8,
+                  position: 'absolute',
+                  bottom: 110,
+                  right: 10,
+                  width: Dimensions.get('window').width / 3.5,
+                  height: Dimensions.get('window').height / 4,
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                }}
+                streamURL={invertVideoScreen ? localStream?.toURL() : remoteStream?.toURL()}
+              />
+          </TouchableWithoutFeedback>
         ) : null}
         <View
           style={{
