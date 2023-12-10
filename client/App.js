@@ -7,13 +7,15 @@ import {
   View,
   Text,
   TouchableOpacity,
+  ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import TextInputContainer from './components/TextInputContainer';
 import SocketIOClient from 'socket.io-client';
 import {
   mediaDevices,
   RTCPeerConnection,
-  RTCView,
+  // RTCView,
   RTCIceCandidate,
   RTCSessionDescription,
 } from 'react-native-webrtc';
@@ -21,11 +23,13 @@ import CallEnd from './asset/CallEnd';
 import CallAnswer from './asset/CallAnswer';
 import MicOn from './asset/MicOn';
 import MicOff from './asset/MicOff';
-import VideoOn from './asset/VideoOn';
-import VideoOff from './asset/VideoOff';
-import CameraSwitch from './asset/CameraSwitch';
 import IconContainer from './components/IconContainer';
 import InCallManager from 'react-native-incall-manager';
+import { VLCPlayer, VlCPlayerView } from 'react-native-vlc-media-player';
+
+const calcVLCPlayerHeight = (windowWidth,aspetRatio) => {
+  return windowWidth * aspetRatio;
+};
 
 export default function App({}) {
   const [localStream, setLocalStream] = useState(null);
@@ -34,6 +38,8 @@ export default function App({}) {
   const [callerId] = useState(Math.floor(100000 + Math.random() * 900000).toString());
   const [localMicOn, setLocalMicOn] = useState(true);
   const otherUserId = useRef(null);
+  const vlcPlayerRef = useRef(null);
+  const [isPlayerReady, setPlayerReady] = useState(false);
   
   const socket = SocketIOClient('http://192.168.0.10:3500', {
     transports: ['websocket'],
@@ -138,6 +144,8 @@ export default function App({}) {
       InCallManager.stop();
     };
   }, []);
+
+    
   
   function sendICEcandidate(data) {
     socket.emit('ICEcandidate', data);
@@ -210,7 +218,7 @@ export default function App({}) {
                   fontSize: 18,
                   color: '#D0D4DD',
                 }}>
-                Your Caller ID
+                Seu Ramal
               </Text>
               <View
                 style={{
@@ -242,10 +250,10 @@ export default function App({}) {
                   fontSize: 18,
                   color: '#D0D4DD',
                 }}>
-                Enter call id of another user
+                Insira o Ramal de Destino
               </Text>
               <TextInputContainer
-                placeholder={'Enter Caller ID'}
+                placeholder={'Ramal'}
                 value={otherUserId.current}
                 setValue={text => {
                   otherUserId.current = text;
@@ -271,7 +279,7 @@ export default function App({}) {
                     fontSize: 16,
                     color: '#FFFFFF',
                   }}>
-                  Call Now
+                  Ligar agora
                 </Text>
               </TouchableOpacity>
             </View>
@@ -301,7 +309,7 @@ export default function App({}) {
               fontSize: 16,
               color: '#D0D4DD',
             }}>
-            Calling to...
+            Ligando para
           </Text>
 
           <Text
@@ -360,7 +368,7 @@ export default function App({}) {
               marginTop: 12,
               color: '#ffff',
             }}>
-            {otherUserId.current} is calling..
+            {otherUserId.current} está ligando
           </Text>
         </View>
         <View
@@ -410,24 +418,6 @@ export default function App({}) {
           paddingHorizontal: 12,
           paddingVertical: 12,
         }}>
-        {/* {localStream ? (
-          <RTCView
-            objectFit={'cover'}
-            style={{flex: 1, backgroundColor: '#050A0E'}}
-            streamURL={localStream.toURL()}
-          />
-        ) : null}
-        {remoteStream ? (
-          <RTCView
-            objectFit={'cover'}
-            style={{
-              flex: 1,
-              backgroundColor: '#050A0E',
-              marginTop: 8,
-            }}
-            streamURL={remoteStream.toURL()}
-          />
-        ) : null} */}
         <View 
           style={{
             flex: 1,
@@ -435,14 +425,16 @@ export default function App({}) {
             justifyContent: 'center',
             alignItems: 'center',
           }}>
-          <Text
-            style={{
-              fontSize: 36,
-              marginTop: 12,
-              color: '#ffff',
-            }}>
-            {otherUserId.current}
-          </Text>
+            <VLCPlayer
+              style={{
+                width: '100%',
+                height: calcVLCPlayerHeight(Dimensions.get('window').width, 9/16),
+                
+              }}
+              videoAspectRatio="16:9"
+              // url="rtsp://"
+              source={{ uri: ""}}
+          />
         </View>
         <View
           style={{
@@ -476,36 +468,6 @@ export default function App({}) {
               );
             }}
           />
-          {/* <IconContainer
-            style={{
-              borderWidth: 1.5,
-              borderColor: '#2B3034',
-            }}
-            backgroundColor={!localWebcamOn ? '#fff' : 'transparent'}
-            onPress={() => {
-              toggleCamera();
-            }}
-            Icon={() => {
-              return localWebcamOn ? (
-                <VideoOn height={24} width={24} fill="#FFF" />
-              ) : (
-                <VideoOff height={36} width={36} fill="#1D2939" />
-              );
-            }}
-          /> */}
-          {/* <IconContainer
-            style={{
-              borderWidth: 1.5,
-              borderColor: '#2B3034',
-            }}
-            backgroundColor={'transparent'}
-            onPress={() => {
-              switchCamera();
-            }}
-            Icon={() => {
-              return <CameraSwitch height={24} width={24} fill="#FFF" />;
-            }}
-          /> */}
         </View>
       </View>
     );
