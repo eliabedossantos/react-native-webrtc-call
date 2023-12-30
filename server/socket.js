@@ -6,8 +6,8 @@ module.exports.initIO = (httpServer) => {
 
   IO.use((socket, next) => {
     if (socket.handshake.query) {
-      let callerId = socket.handshake.query.callerId;
-      socket.user = callerId;
+      // let callerId = socket.handshake.query.callerId;
+      socket.user = 91002;
       next();
     }
   });

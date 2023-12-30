@@ -11,14 +11,8 @@ import {
   Dimensions,
 } from 'react-native';
 import TextInputContainer from './components/TextInputContainer';
-import SocketIOClient from 'socket.io-client';
-import {
-  mediaDevices,
-  RTCPeerConnection,
-  // RTCView,
-  RTCIceCandidate,
-  RTCSessionDescription,
-} from 'react-native-webrtc';
+
+
 import CallEnd from './asset/CallEnd';
 import CallAnswer from './asset/CallAnswer';
 import MicOn from './asset/MicOn';
@@ -32,166 +26,14 @@ const calcVLCPlayerHeight = (windowWidth,aspetRatio) => {
 };
 
 export default function App({}) {
-  const [localStream, setLocalStream] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
   const [type, setType] = useState('JOIN');
   const [callerId] = useState(Math.floor(100000 + Math.random() * 900000).toString());
   const [localMicOn, setLocalMicOn] = useState(true);
   const otherUserId = useRef(null);
-  const vlcPlayerRef = useRef(null);
-  const [isPlayerReady, setPlayerReady] = useState(false);
-  
-  const socket = SocketIOClient('http://192.168.0.10:3500', {
-    transports: ['websocket'],
-    query: {
-      callerId,
-    },
-  });
-  
-  const peerConnection = useRef(new RTCPeerConnection({
-    iceServers: [],
-  }));
-  
-  let remoteRTCMessage = useRef(null);
-  
-  useEffect(() => {
-    const initializePeerConnection = async () => {
-      try {
-        const newPeerConnection = new RTCPeerConnection({
-          iceServers: [],
-        });
-  
-        peerConnection.current = newPeerConnection;
-  
-        const stream = await mediaDevices.getUserMedia({ audio: true });
-  
-        setLocalStream(stream);
-        peerConnection.current.addStream(stream);
-  
-        peerConnection.current.onaddstream = event => {
-          setRemoteStream(event.stream);
-        };
-  
-        peerConnection.current.onicecandidate = event => {
-          if (event.candidate) {
-            sendICEcandidate({
-              calleeId: otherUserId.current,
-              rtcMessage: {
-                label: event.candidate.sdpMLineIndex,
-                id: event.candidate.sdpMid,
-                candidate: event.candidate.candidate,
-              },
-            });
-          } else {
-            console.log('End of candidates.');
-          }
-        };
-      } catch (error) {
-        console.error("Erro ao inicializar a conexão peer:", error);
-      }
-    };
-  
-    initializePeerConnection();
-  
-    socket.on('newCall', data => {
-      remoteRTCMessage.current = data.rtcMessage;
-      otherUserId.current = data.callerId;
-      setType('INCOMING_CALL');
-    });
-  
-    socket.on('callAnswered', data => {
-      remoteRTCMessage.current = data.rtcMessage;
-      peerConnection.current.setRemoteDescription(
-        new RTCSessionDescription(remoteRTCMessage.current),
-      );
-      setType('WEBRTC_ROOM');
-    });
-  
-    socket.on('ICEcandidate', data => {
-      let message = data.rtcMessage;
-  
-      if (peerConnection.current) {
-        peerConnection?.current
-          .addIceCandidate(
-            new RTCIceCandidate({
-              candidate: message.candidate,
-              sdpMid: message.id,
-              sdpMLineIndex: message.label,
-            }),
-          )
-          .then(data => {
-            console.log('SUCCESS');
-          })
-          .catch(err => {
-            console.log('Erro', err);
-          });
-      }
-    });
-  
-    return () => {
-      socket.off('newCall');
-      socket.off('callAnswered');
-      socket.off('ICEcandidate');
-    };
-  }, []);
-  
-  useEffect(() => {
-    InCallManager.start();
-    InCallManager.setKeepScreenOn(true);
-    InCallManager.setForceSpeakerphoneOn(true);
-  
-    return () => {
-      InCallManager.stop();
-    };
-  }, []);
 
-    
-  
-  function sendICEcandidate(data) {
-    socket.emit('ICEcandidate', data);
-  }
-  
-  async function processCall() {
-    const sessionDescription = await peerConnection.current.createOffer();
-    await peerConnection.current.setLocalDescription(sessionDescription);
-    sendCall({
-      calleeId: otherUserId.current,
-      rtcMessage: sessionDescription,
-    });
-  }
-  
-  async function processAccept() {
-    peerConnection.current.setRemoteDescription(
-      new RTCSessionDescription(remoteRTCMessage.current),
-    );
-    const sessionDescription = await peerConnection.current.createAnswer();
-    await peerConnection.current.setLocalDescription(sessionDescription);
-    answerCall({
-      callerId: otherUserId.current,
-      rtcMessage: sessionDescription,
-    });
-  }
-  
-  function answerCall(data) {
-    socket.emit('answerCall', data);
-  }
-  
-  function sendCall(data) {
-    socket.emit('call', data);
-  }
-  
-  function toggleMic() {
-    setLocalMicOn(prevState => !prevState);
-    localStream.getAudioTracks().forEach(track => {
-      track.enabled = !localMicOn;
-    });
-  }
-  
-  function leave() {
-    peerConnection.current.close();
-    setLocalStream(null);
-    setType('JOIN');
-  }
+
+
+
 
   const JoinScreen = () => {
     return (
@@ -264,7 +106,7 @@ export default function App({}) {
               <TouchableOpacity
                 onPress={() => {
                   setType('OUTGOING_CALL');
-                  processCall();
+                  // processCall();
                 }}
                 style={{
                   height: 50,
@@ -396,18 +238,18 @@ export default function App({}) {
     );
   };
 
-  function toggleMic() {
-    localMicOn ? setLocalMicOn(false) : setLocalMicOn(true);
-    localStream.getAudioTracks().forEach(track => {
-      localMicOn ? (track.enabled = false) : (track.enabled = true);
-    });
-  }
+  // function toggleMic() {
+  //   localMicOn ? setLocalMicOn(false) : setLocalMicOn(true);
+  //   localStream.getAudioTracks().forEach(track => {
+  //     localMicOn ? (track.enabled = false) : (track.enabled = true);
+  //   });
+  // }
 
-  function leave() {
-    peerConnection.current.close();
-    setLocalStream(null);
-    setType('JOIN');
-  }
+  // function leave() {
+  //   peerConnection.current.close();
+  //   setLocalStream(null);
+  //   setType('JOIN');
+  // }
 
   const WebrtcRoomScreen = () => {
     return (

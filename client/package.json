@@ -10,12 +10,14 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "jssip": "^3.10.1",
     "react": "17.0.2",
     "react-native": "0.68.2",
+    "react-native-callkit": "git+https://github.com/react-native-webrtc/react-native-callkit.git",
     "react-native-incall-manager": "^4.0.1",
+    "react-native-pjsip": "file:modules/react-native-pjsip",
     "react-native-svg": "^13.7.0",
     "react-native-vlc-media-player": "^1.0.61",
-    "react-native-webrtc": "^1.94.2",
     "socket.io-client": "^4.5.4"
   },
   "devDependencies": {

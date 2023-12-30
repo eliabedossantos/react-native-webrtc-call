@@ -456,6 +456,13 @@ side-channel@^1.0.4:
     get-intrinsic "^1.0.2"
     object-inspect "^1.9.0"
 
+sip-gateway@^2.2.0:
+  version "2.2.0"
+  resolved "https://registry.npmjs.org/sip-gateway/-/sip-gateway-2.2.0.tgz"
+  integrity sha512-FTQs1a1fsFyxzA+D1QSyOo3bZ9lWRujbB2AvZcxkBC6Wj66kYiUWukbjGClYQBIqThs5XfRuHIjSHF7+R8SHwg==
+  dependencies:
+    ws "^8.12.0"
+
 socket.io-adapter@~2.4.0:
   version "2.4.0"
   resolved "https://registry.npmjs.org/socket.io-adapter/-/socket.io-adapter-2.4.0.tgz"
@@ -513,6 +520,11 @@ vary@^1, vary@~1.1.2:
   version "1.1.2"
   resolved "https://registry.npmjs.org/vary/-/vary-1.1.2.tgz"
   integrity sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==
+
+ws@^8.12.0:
+  version "8.15.1"
+  resolved "https://registry.npmjs.org/ws/-/ws-8.15.1.tgz"
+  integrity sha512-W5OZiCjXEmk0yZ66ZN82beM5Sz7l7coYxpRkzS+p9PP+ToQry8szKh+61eNktr7EA9DOwvFGhfC605jDHbP6QQ==
 
 ws@~8.2.3:
   version "8.2.3"
