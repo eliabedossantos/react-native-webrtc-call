@@ -12,14 +12,15 @@ import {
 } from 'react-native';
 import TextInputContainer from './components/TextInputContainer';
 
-
 import CallEnd from './asset/CallEnd';
 import CallAnswer from './asset/CallAnswer';
 import MicOn from './asset/MicOn';
 import MicOff from './asset/MicOff';
 import IconContainer from './components/IconContainer';
-import InCallManager from 'react-native-incall-manager';
 import { VLCPlayer, VlCPlayerView } from 'react-native-vlc-media-player';
+import InCallManager from 'react-native-incall-manager';
+import {Endpoint} from 'react-native-pjsip';
+import DeviceInfo from 'react-native-device-info';
 
 const calcVLCPlayerHeight = (windowWidth,aspetRatio) => {
   return windowWidth * aspetRatio;
@@ -27,11 +28,135 @@ const calcVLCPlayerHeight = (windowWidth,aspetRatio) => {
 
 export default function App({}) {
   const [type, setType] = useState('JOIN');
-  const [callerId] = useState(Math.floor(100000 + Math.random() * 900000).toString());
+  const [stateEndpoint, setStateEndpoint] = useState();
+  const [stateAccount, setStateAccount] = useState();
+  const [localStream, setLocalStream] = useState();
   const [localMicOn, setLocalMicOn] = useState(true);
-  const otherUserId = useRef(null);
+  const [remoteStream, setRemoteStream] = useState();
+  const [callerId, setCallerId] = useState();
+  const [callerName, setCallerName] = useState();
+  const [callReceivedEvent, setCallReceivedEvent] = useState();
 
 
+  const endpoint = new Endpoint();
+
+  const createAccount = async () => {
+    let deviceId = await DeviceInfo.getUniqueId();
+    
+    let configuration = {
+      name: "",
+      username: "",
+      domain: "",
+      password: "",
+      proxy: null,
+      regHeaders: {
+        "X-Custom-Header": "Value"
+      },
+      regContactParams: `;unique-device-token-id=${deviceId}`,
+      regOnAdd: false,
+      android: `;im-type=sip`,
+      transport: "UDP",
+      audioCodecs: ["PCMU", "PCMA", "G722", "G729", "opus"],
+    };
+    
+
+    const state = await endpoint.start({
+      service: {
+        ua: Platform.select({ios: "RnSIP iOS", android: "RnSIP Android"})
+      },
+      network: {
+        useWifi: true,
+        useOtherNetworks: true,
+      }
+    }).then((state) => {
+      console.log('state', state);
+      setStateEndpoint(state);
+      return state;
+    }).catch((error) => {
+      console.log('error', error);
+    })
+  
+    const account = await endpoint.createAccount(configuration).then((account) => {
+      console.log('account', account);
+        setTimeout(() => {
+          endpoint.registerAccount(account, true);
+      }, 5000);
+      setStateAccount(account);
+      return account;
+    }).catch((error) => {
+      console.log('error', error);
+    })
+
+  }
+
+  useEffect(() => {
+    createAccount();
+  }, []);
+
+  // useEffect(() => {
+  //   InCallManager.start();
+  //   InCallManager.setKeepScreenOn(true);
+  //   InCallManager.setForceSpeakerphoneOn(true);
+  //   InCallManager.setMicrophoneMute(false);
+  
+  //   return () => {
+  //     InCallManager.stop();
+  //   };
+  // }, []);
+  
+
+  const acceptCall = () => {
+    // Aceitar a chamada
+    endpoint.answerCall(callReceivedEvent, {
+      statusCode: 200,
+    });
+
+    InCallManager.start({ media: 'audio', auto: true, });
+    InCallManager.stopRingtone();
+    InCallManager.setKeepScreenOn(true);
+    InCallManager.setForceSpeakerphoneOn(true);
+    InCallManager.setMicrophoneMute(false);
+
+
+  };
+  
+
+  endpoint.on('registration_changed', (event) => {
+    console.log('registration_changed', event);
+  });
+
+  endpoint.on('call_received', (event) => {
+    console.log('call_received', event);
+    setCallerId(event._callId);
+    setCallerName(event._remoteName);
+    setCallReceivedEvent(event);
+    setType('INCOMING_CALL');
+    InCallManager.startRingtone('_DEFAULT_');
+  });
+
+
+  endpoint.on('call_changed', (event) => {
+    console.log('call_changed', event);
+
+    if (event.getState() === 'PJSIP_INV_STATE_CONFIRMED') {
+      console.log('PJSIP_INV_STATE_CONFIRMED', event.getState());
+      
+      setType('WEBRTC_ROOM');
+    } else if (event.getState() === 'PJSIP_INV_STATE_DISCONNECTED') {
+      console.log('PJSIP_INV_STATE_DISCONNECTED', event.getState());
+      setType('JOIN');
+    }
+  });
+
+  endpoint.on('call_terminated', (event) => {
+    console.log('call_terminated', event);
+
+    if (event.getState() === 'PJSIP_INV_STATE_DISCONNECTED') {
+      console.log('PJSIP_INV_STATE_DISCONNECTED', event.getState());
+      InCallManager.stop();
+
+    }
+  });
 
 
 
@@ -74,7 +199,7 @@ export default function App({}) {
                     color: '#ffff',
                     letterSpacing: 6,
                   }}>
-                  {callerId}
+                  91002
                 </Text>
               </View>
             </View>
@@ -94,7 +219,7 @@ export default function App({}) {
                 }}>
                 Insira o Ramal de Destino
               </Text>
-              <TextInputContainer
+              {/* <TextInputContainer
                 placeholder={'Ramal'}
                 value={otherUserId.current}
                 setValue={text => {
@@ -102,7 +227,7 @@ export default function App({}) {
                   console.log('TEST', otherUserId.current);
                 }}
                 keyboardType={'number-pad'}
-              />
+              /> */}
               <TouchableOpacity
                 onPress={() => {
                   setType('OUTGOING_CALL');
@@ -161,7 +286,7 @@ export default function App({}) {
               color: '#ffff',
               letterSpacing: 6,
             }}>
-            {otherUserId.current}
+           {callerName ? callerName : 'sem nome'} - {callerId ? callerId : 'sem id'}
           </Text>
         </View>
         <View
@@ -172,7 +297,7 @@ export default function App({}) {
           <TouchableOpacity
             onPress={() => {
               setType('JOIN');
-              otherUserId.current = null;
+              // otherUserId.current = null;
             }}
             style={{
               backgroundColor: '#FF5D5D',
@@ -210,7 +335,7 @@ export default function App({}) {
               marginTop: 12,
               color: '#ffff',
             }}>
-            {otherUserId.current} está ligando
+            {callerName ? callerName : 'sem nome'} está ligando
           </Text>
         </View>
         <View
@@ -220,8 +345,9 @@ export default function App({}) {
           }}>
           <TouchableOpacity
             onPress={() => {
-              processAccept();
-              setType('WEBRTC_ROOM');
+              // processAccept();
+              // setType('WEBRTC_ROOM');
+              acceptCall(callerId);
             }}
             style={{
               backgroundColor: 'green',
@@ -238,12 +364,12 @@ export default function App({}) {
     );
   };
 
-  // function toggleMic() {
-  //   localMicOn ? setLocalMicOn(false) : setLocalMicOn(true);
-  //   localStream.getAudioTracks().forEach(track => {
-  //     localMicOn ? (track.enabled = false) : (track.enabled = true);
-  //   });
-  // }
+  function toggleMic() {
+    localMicOn ? setLocalMicOn(false) : setLocalMicOn(true);
+    localStream.getAudioTracks().forEach(track => {
+      localMicOn ? (track.enabled = false) : (track.enabled = true);
+    });
+  }
 
   // function leave() {
   //   peerConnection.current.close();
