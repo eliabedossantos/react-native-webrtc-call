@@ -269,7 +269,9 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation project(':react-native-pjsip')
+    implementation project(':react-native-incall-manager')
     implementation "com.facebook.react:react-native:+"
+
 
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.0.0"
 

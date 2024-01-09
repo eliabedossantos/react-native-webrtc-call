@@ -19,6 +19,7 @@
     "react-native-pjsip": "file:modules/react-native-pjsip",
     "react-native-svg": "^13.7.0",
     "react-native-vlc-media-player": "^1.0.61",
+    "react-native-voip-push-notification": "^3.3.2",
     "socket.io-client": "^4.5.4"
   },
   "devDependencies": {

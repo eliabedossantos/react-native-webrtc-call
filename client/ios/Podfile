@@ -23,6 +23,8 @@ target 'WebRTCExample' do
 
   pod 'react-native-pjsip', :path => '../node_modules/react-native-pjsip'
 
+  pod 'ReactNativeIncallManager', :path => '../node_modules/react-native-incall-manager'
+
   target 'WebRTCExampleTests' do
     inherit! :complete
     # Pods for testing

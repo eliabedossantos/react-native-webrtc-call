@@ -21,6 +21,7 @@ import { VLCPlayer, VlCPlayerView } from 'react-native-vlc-media-player';
 import InCallManager from 'react-native-incall-manager';
 import {Endpoint} from 'react-native-pjsip';
 import DeviceInfo from 'react-native-device-info';
+import config from './utils/config';
 
 const calcVLCPlayerHeight = (windowWidth,aspetRatio) => {
   return windowWidth * aspetRatio;
@@ -44,19 +45,44 @@ export default function App({}) {
     let deviceId = await DeviceInfo.getUniqueId();
     
     let configuration = {
-      name: "",
-      username: "",
-      domain: "",
-      password: "",
+      name: "Tester",
+      username: config.user,
+      password: config.password,
+      domain: config.voipHost,
       proxy: null,
       regHeaders: {
-        "X-Custom-Header": "Value"
+        "X-Custom-Header": "Value",
       },
       regContactParams: `;unique-device-token-id=${deviceId}`,
       regOnAdd: false,
       android: `;im-type=sip`,
       transport: "UDP",
-      audioCodecs: ["PCMU", "PCMA", "G722", "G729", "opus"],
+      codecs: ["opus", "PCMU", "G729", "PCMA"]
+      // iceServers: [
+      //   {
+      //     urls: "stun:stun.relay.metered.ca:80",
+      //   },
+      //   {
+      //     urls: "turn:standard.relay.metered.ca:80",
+      //     username: "011b39ba3691894935229948",
+      //     credential: "fzlWLcdYaT5mtQRx",
+      //   },
+      //   {
+      //     urls: "turn:standard.relay.metered.ca:80?transport=tcp",
+      //     username: "011b39ba3691894935229948",
+      //     credential: "fzlWLcdYaT5mtQRx",
+      //   },
+      //   {
+      //     urls: "turn:standard.relay.metered.ca:443",
+      //     username: "011b39ba3691894935229948",
+      //     credential: "fzlWLcdYaT5mtQRx",
+      //   },
+      //   {
+      //     urls: "turn:standard.relay.metered.ca:443?transport=tcp",
+      //     username: "011b39ba3691894935229948",
+      //     credential: "fzlWLcdYaT5mtQRx",
+      //   },
+      // ],
     };
     
 
@@ -71,6 +97,13 @@ export default function App({}) {
     }).then((state) => {
       console.log('state', state);
       setStateEndpoint(state);
+      // state.accounts.forEach((account) => {
+      //   endpoint.deleteAccount(account).then((account) => {
+      //     console.log('account', account);
+      //   }).catch((error) => {
+      //     console.log('error', error);
+      //   })
+      // });
       return state;
     }).catch((error) => {
       console.log('error', error);
@@ -80,7 +113,7 @@ export default function App({}) {
       console.log('account', account);
         setTimeout(() => {
           endpoint.registerAccount(account, true);
-      }, 5000);
+      }, 10000);
       setStateAccount(account);
       return account;
     }).catch((error) => {
@@ -93,16 +126,16 @@ export default function App({}) {
     createAccount();
   }, []);
 
-  // useEffect(() => {
-  //   InCallManager.start();
-  //   InCallManager.setKeepScreenOn(true);
-  //   InCallManager.setForceSpeakerphoneOn(true);
-  //   InCallManager.setMicrophoneMute(false);
+  useEffect(() => {
+    InCallManager.start({media: 'audio'});
+    InCallManager.setKeepScreenOn(true);
+    InCallManager.setForceSpeakerphoneOn(true);
+    // InCallManager.setMicrophoneMute(false);
   
-  //   return () => {
-  //     InCallManager.stop();
-  //   };
-  // }, []);
+    return () => {
+      InCallManager.stop();
+    };
+  }, []);
   
 
   const acceptCall = () => {
@@ -111,40 +144,93 @@ export default function App({}) {
       statusCode: 200,
     });
 
-    InCallManager.start({ media: 'audio', auto: true, });
-    InCallManager.stopRingtone();
-    InCallManager.setKeepScreenOn(true);
-    InCallManager.setForceSpeakerphoneOn(true);
-    InCallManager.setMicrophoneMute(false);
+  };
 
+  const rejectCall = () => {
+    // Rejeitar a chamada
+    endpoint.hangupCall(callReceivedEvent, {
+      statusCode: 603,
+    });
+    setType('JOIN');
+  };
 
+  const processCall = async () => {
+    // Fazer a chamada
+    const call = await endpoint.makeCall(
+      stateAccount,
+      '91003',
+      {
+        videoEnabled: false,
+        audioEnabled: true,
+        sendInitialVideo: false,
+        sendInitialAudio: true,
+      },
+      {
+        statusCode: 200,
+      },
+    );
+  };
+
+  const processAccept = async () => { 
+    // Aceitar a chamada
+    endpoint.answerCall(callReceivedEvent, {
+      statusCode: 200,
+    });
+  }
+
+  const processReject = async () => {
+    // Rejeitar a chamada
+    endpoint.answerCall(callReceivedEvent, {
+      statusCode: 486,
+    });
+  }
+
+  const leave = async () => {
+    // Desligar a chamada
+    endpoint.hangupCall(callReceivedEvent, {
+      statusCode: 200,
+    });
   };
   
 
   endpoint.on('registration_changed', (event) => {
-    console.log('registration_changed', event);
+    // console.log('registration_changed', event);
   });
 
   endpoint.on('call_received', (event) => {
-    console.log('call_received', event);
+    // console.log('call_received', event);
     setCallerId(event._callId);
     setCallerName(event._remoteName);
     setCallReceivedEvent(event);
+    
     setType('INCOMING_CALL');
-    InCallManager.startRingtone('_DEFAULT_');
   });
 
 
   endpoint.on('call_changed', (event) => {
-    console.log('call_changed', event);
-
-    if (event.getState() === 'PJSIP_INV_STATE_CONFIRMED') {
-      console.log('PJSIP_INV_STATE_CONFIRMED', event.getState());
-      
-      setType('WEBRTC_ROOM');
-    } else if (event.getState() === 'PJSIP_INV_STATE_DISCONNECTED') {
-      console.log('PJSIP_INV_STATE_DISCONNECTED', event.getState());
-      setType('JOIN');
+    // console.log('call_changed', event);
+    switch (event.getState()) {
+      case 'PJSIP_INV_STATE_CALLING':
+        console.log('PJSIP_INV_STATE_CALLING', event.getState());
+        break;
+      case 'PJSIP_INVSTATE_CONFIRMED':
+        console.log('PJSIP_INVSTATE_CONFIRMED', event.getState());
+        
+        console.log('audio stream', event._provisionalMedia.audioStream);
+        setType('WEBRTC_ROOM');
+        break;
+      case 'PJSIP_INV_STATE_DISCONNECTED':
+        console.log('PJSIP_INV_STATE_DISCONNECTED', event.getState());
+        setType('JOIN');
+        break;
+      case 'PJSIP_INV_STATE_EARLY':
+        console.log('PJSIP_INV_STATE_EARLY', event.getState());
+        break;
+      case 'PJSIP_INV_STATE_CONNECTING':
+        console.log('PJSIP_INV_STATE_CONNECTING', event.getState());
+        break;
+      default:
+        break;
     }
   });
 
@@ -153,8 +239,9 @@ export default function App({}) {
 
     if (event.getState() === 'PJSIP_INV_STATE_DISCONNECTED') {
       console.log('PJSIP_INV_STATE_DISCONNECTED', event.getState());
-      InCallManager.stop();
+   
 
+      setType('JOIN');
     }
   });
 
@@ -199,12 +286,12 @@ export default function App({}) {
                     color: '#ffff',
                     letterSpacing: 6,
                   }}>
-                  91002
+                  {config.user}
                 </Text>
               </View>
             </View>
 
-            <View
+            {/* <View
               style={{
                 backgroundColor: '#1A1C22',
                 padding: 40,
@@ -218,8 +305,8 @@ export default function App({}) {
                   color: '#D0D4DD',
                 }}>
                 Insira o Ramal de Destino
-              </Text>
-              {/* <TextInputContainer
+              </Text> 
+              <TextInputContainer
                 placeholder={'Ramal'}
                 value={otherUserId.current}
                 setValue={text => {
@@ -227,11 +314,11 @@ export default function App({}) {
                   console.log('TEST', otherUserId.current);
                 }}
                 keyboardType={'number-pad'}
-              /> */}
+              />
               <TouchableOpacity
                 onPress={() => {
                   setType('OUTGOING_CALL');
-                  // processCall();
+                  processCall();
                 }}
                 style={{
                   height: 50,
@@ -249,7 +336,7 @@ export default function App({}) {
                   Ligar agora
                 </Text>
               </TouchableOpacity>
-            </View>
+            </View>  */}
           </>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
@@ -306,6 +393,7 @@ export default function App({}) {
               aspectRatio: 1,
               justifyContent: 'center',
               alignItems: 'center',
+              marginLeft: 12,
             }}>
             <CallEnd width={50} height={12} />
           </TouchableOpacity>
@@ -342,11 +430,12 @@ export default function App({}) {
           style={{
             justifyContent: 'center',
             alignItems: 'center',
+            flexDirection: 'row',
           }}>
           <TouchableOpacity
             onPress={() => {
               // processAccept();
-              // setType('WEBRTC_ROOM');
+              setType('WEBRTC_ROOM');
               acceptCall(callerId);
             }}
             style={{
@@ -358,6 +447,23 @@ export default function App({}) {
               alignItems: 'center',
             }}>
             <CallAnswer height={28} fill={'#fff'} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              // processAccept();
+              // setType('WEBRTC_ROOM');
+              rejectCall(callerId);
+            }}
+            style={{
+              backgroundColor: '#FF5D5D',
+              borderRadius: 30,
+              height: 60,
+              aspectRatio: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginLeft: 16,
+            }}>
+            <CallEnd height={28} fill={'#fff'} />
           </TouchableOpacity>
         </View>
       </View>
@@ -400,7 +506,7 @@ export default function App({}) {
                 
               }}
               videoAspectRatio="16:9"
-              source={{ uri: "rtsp://"}}
+              source={{ uri: config.vlcStream}}
           />
         </View>
         <View
@@ -418,14 +524,14 @@ export default function App({}) {
               return <CallEnd height={26} width={26} fill="#FFF" />;
             }}
           />
-          <IconContainer
+          {/* <IconContainer
             style={{
               borderWidth: 1.5,
               borderColor: '#2B3034',
             }}
             backgroundColor={!localMicOn ? '#fff' : 'transparent'}
             onPress={() => {
-              toggleMic();
+              // toggleMic();
             }}
             Icon={() => {
               return localMicOn ? (
@@ -434,7 +540,7 @@ export default function App({}) {
                 <MicOff height={28} width={28} fill="#1D2939" />
               );
             }}
-          />
+          /> */}
         </View>
       </View>
     );
