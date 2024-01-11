@@ -1,4 +1,6 @@
 rootProject.name = 'WebRTCExample'
+include ':react-native-full-screen-notification-incoming-call'
+project(':react-native-full-screen-notification-incoming-call').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-full-screen-notification-incoming-call/android')
 include ':react-native-notifications'
 project(':react-native-notifications').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-notifications/lib/android/app')
 include ':react-native-incall-manager'

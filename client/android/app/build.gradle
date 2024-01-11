@@ -271,11 +271,11 @@ dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation project(':react-native-pjsip')
     implementation project(':react-native-incall-manager')
+    implementation project(':react-native-full-screen-notification-incoming-call')
     implementation project(':react-native-notifications')
     implementation "com.facebook.react:react-native:+"
     implementation "com.google.firebase:firebase-core:16.0.0"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.0.0"
-
     debugImplementation("com.facebook.flipper:flipper:${FLIPPER_VERSION}") {
         exclude group:'com.facebook.fbjni'
     }

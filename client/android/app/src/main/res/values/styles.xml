@@ -5,5 +5,9 @@
         <!-- Customize your theme here. -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     </style>
+    <style name="incomingCall" parent="Theme.AppCompat.Light.NoActionBar">
+    <!-- Customize status bar color   -->
+        <item name="colorPrimaryDark">#000000</item>
+    </style>
 
 </resources>

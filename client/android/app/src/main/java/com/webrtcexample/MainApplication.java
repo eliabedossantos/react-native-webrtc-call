@@ -4,6 +4,7 @@ import android.app.Application;
 import android.content.Context;
 import com.facebook.react.PackageList;
 import com.facebook.react.ReactApplication;
+import com.reactnativefullscreennotificationincomingcall.FullScreenNotificationIncomingCallPackage;
 import com.wix.reactnativenotifications.RNNotificationsPackage;
 import com.zxcpoiu.incallmanager.InCallManagerPackage;
 import com.carusto.ReactNativePjSip.PjSipModulePackage;

@@ -15,6 +15,7 @@
     "react-native": "0.68.2",
     "react-native-callkit": "git+https://github.com/react-native-webrtc/react-native-callkit.git",
     "react-native-device-info": "^10.12.0",
+    "react-native-full-screen-notification-incoming-call": "^0.1.12",
     "react-native-incall-manager": "^4.0.1",
     "react-native-notifications": "^5.1.0",
     "react-native-pjsip": "file:modules/react-native-pjsip",

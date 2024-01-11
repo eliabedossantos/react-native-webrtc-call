@@ -22,7 +22,7 @@ import InCallManager from 'react-native-incall-manager';
 import {Endpoint} from 'react-native-pjsip';
 import DeviceInfo from 'react-native-device-info';
 import config from './utils/config';
-import { Notifications } from 'react-native-notifications';
+import RNNotificationCall from 'react-native-full-screen-notification-incoming-call';
 
 const calcVLCPlayerHeight = (windowWidth,aspetRatio) => {
   return windowWidth * aspetRatio;
@@ -166,111 +166,71 @@ export default function App({}) {
     });
   };
 
-  Notifications.registerRemoteNotifications();
 
-  Notifications.events().registerNotificationReceivedForeground((notification, completion) => {
-    console.log(`Notification received in foreground: ${notification.title} : ${notification.body}`);
-    completion({alert: false, sound: false, badge: false});
-  });
-
-  Notifications.events().registerNotificationOpened((notification, completion) => {
-    console.log(`Notification opened: ${notification.payload}`);
-    completion();
-  });
-
-  const sendCallNotification = (callerName) => {
-    Notifications.setNotificationChannel({
-      channelId: 'call-channel',
-      name: 'Call Channel',
-      importance: 5,
-      description: 'Call Channel',
-      enableLights: true,
-      enableVibration: true,
-      groupId: 'call-group',
-      groupName: 'Call Group',
-      showBadge: true,
-      soundFile: 'call_custom.mp3',  // place this in <project_root>/android/app/src/main/res/raw/custom_sound.mp3
-      vibrationPattern: [200, 1000, 500, 1000, 500],
-  })
-    Notifications.postLocalNotification({
-      body: `Ligação de ${callerName}`,
-      title: 'Ligação',
-      sound: 'call_custom.mp3',
-      silent: false,
-      category: 'call',
-      userInfo: { },
-      fireDate: new Date().toISOString(),
-      isScheduled: false,
-      repeats: false,
-      channelId: 'call-channel',
-      threadId: 'call-thread',
-      smallIcon: 'ic_launcher',
-      largeIcon: 'ic_launcher',
-      groupId: 'call-group',
-      groupSummary: true,
-      autoClear: true,
-      number: 10,
-      color: '#0000FF',
-      notificationId: new Date().getTime().toString(),
-      attachments: [],
-      hasAction: true,
-      alertAction: 'view',
-      foreground: true,
-      userInteraction: true,
-      callback: null,
-      payload: null,
-      extra: null,
-      badgeCount: 0,
-      badge: false,
-      silent: false,
-      sound: 'call_custom.mp3',
-      vibrate: true,
-      vibration: 1000,
-      ignoreInForeground: false,
-      ignoreInActive: false,
-      ignoreWhenAppIsForeground: false,
-      ignoreWhenAppIsActive: false,
-      ignoreWhenAppIsBackground: false,
-      ignoreWhenAppIsInactive: false,
-      ignoreWhenAppIsClosed: false,
-      ignoreWhenAppIsKilled: false,
-      ignoreWhenAppIsPaused: false,
-      ignoreWhenAppIsBackgroundRestricted: false,
-      ignoreWhenDeviceIsLocked: false,
-      ignoreWhenDeviceIsSleeping: false,
-      ignoreWhenDeviceIsDozing: false,
-      ignoreWhenDeviceIsDriving: false,
-      ignoreWhenDeviceIsRunning: false,
-      ignoreWhenDeviceIsNotRunning: false,
-      ignoreWhenDeviceIsNotSleeping: false,
-      ignoreWhenDeviceIsNotDozing: false,
-      ignoreWhenDeviceIsNotDriving: false,
-      ignoreWhenDeviceIsNotIdle: false,
-      ignoreWhenDeviceIsNotLocked: false,
-      ignoreWhenDeviceIsNotActive: false,
-      ignoreWhenDeviceIsNotForeground: false,
-      ignoreWhenDeviceIsNotBackground: false,
-      ignoreWhenDeviceIsNotRestricted: false,
-      ignoreWhenDeviceIsNotPaused: false,
-      ignoreWhenDeviceIsNotKilled: false
-    });
-};
+  const sendCallNotification = (callUid, callerName) => {
+    RNNotificationCall.displayNotification(
+      callUid,
+      null,
+      30000,
+      {
+        channelId: 'com.linhvo.rnnotificationcall',
+        channelName: 'RNNotificationCall',
+        notificationIcon: 'ic_launcher', //mipmap
+        notificationTitle: callerName ? callerName : 'sem nome',
+        notificationBody: 'Ligando...',
+        answerText: 'Atender',
+        declineText: 'Desligar',
+        notificationColor: 'colorAccent',
+        notificationSound: 'ringtone',
+        // payload:{
+        //   name: callerName ? callerName : 'sem nome',
+        //   Body: 'Ligando...',
+        // }
+      }
+    );
+  };
   
+
+  useEffect(() => {
+    // Defina as funções de retorno de chamada
+    const endCallHandler = (data) => {
+      const { callUUID, endAction, payload } = data;
+      console.log('press endCall', callUUID);
+      leave();
+    };
+  
+    const answerCallHandler = (data) => {
+      const { callUUID, endAction, payload } = data;
+      console.log('press answerCall', callUUID);
+      acceptCall();
+    };
+  
+    // Adicione os ouvintes usando as funções de retorno de chamada
+    RNNotificationCall.addEventListener('endCall', endCallHandler);
+    RNNotificationCall.addEventListener('answerCall', answerCallHandler);
+  
+    // Remova os ouvintes usando as mesmas funções de retorno de chamada
+    return () => {
+      RNNotificationCall.removeEventListener('endCall', endCallHandler);
+      RNNotificationCall.removeEventListener('answerCall', answerCallHandler);
+    };
+  }, []);
 
   endpoint.on('registration_changed', (event) => {
     // console.log('registration_changed', event);
   });
 
   endpoint.on('call_received', (event) => {
-    // console.log('call_received', event);
     setCallerId(event._callId);
     setCallerName(event._remoteName);
     setCallReceivedEvent(event);
     
-    sendCallNotification(event._remoteName);
+    sendCallNotification(event._callId, event._remoteName);
 
     setType('INCOMING_CALL');
   });
+
+
 
 
   endpoint.on('call_changed', (event) => {
@@ -282,17 +242,17 @@ export default function App({}) {
       case 'PJSIP_INVSTATE_CONFIRMED':
         console.log('PJSIP_INVSTATE_CONFIRMED', event.getState());
         
-        console.log('audio stream', event._provisionalMedia.audioStream);
         setType('WEBRTC_ROOM');
         break;
-      case 'PJSIP_INV_STATE_DISCONNECTED':
-        console.log('PJSIP_INV_STATE_DISCONNECTED', event.getState());
-        setType('JOIN');
-        break;
-      case 'PJSIP_INV_STATE_EARLY':
-        console.log('PJSIP_INV_STATE_EARLY', event.getState());
-        break;
-      case 'PJSIP_INV_STATE_CONNECTING':
+        case 'PJSIP_INV_STATE_DISCONNECTED':
+          console.log('PJSIP_INV_STATE_DISCONNECTED', event.getState());
+          setType('JOIN');
+          break;
+          case 'PJSIP_INV_STATE_EARLY':
+            console.log('PJSIP_INV_STATE_EARLY', event.getState());
+            break;
+          case 'PJSIP_INV_STATE_CONNECTING':
+            RNNotificationCall.hideNotification();
         console.log('PJSIP_INV_STATE_CONNECTING', event.getState());
         break;
       default:
@@ -306,7 +266,7 @@ export default function App({}) {
     if (event.getState() === 'PJSIP_INV_STATE_DISCONNECTED') {
       console.log('PJSIP_INV_STATE_DISCONNECTED', event.getState());
    
-
+      RNNotificationCall.hideNotification();
       setType('JOIN');
     }
   });
@@ -492,6 +452,25 @@ export default function App({}) {
             {callerName ? callerName : 'sem nome'} está ligando
           </Text>
         </View>
+        <View 
+          style={{
+            width: '100%',
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginVertical: 12,
+          }}
+          >
+          <VLCPlayer
+              style={{
+                width: '100%',
+                height: calcVLCPlayerHeight(Dimensions.get('window').width, 9/16),
+                
+              }}
+              videoAspectRatio="16:9"
+              source={{ uri: config.vlcStream}}
+            />
+          </View>
         <View
           style={{
             justifyContent: 'center',
