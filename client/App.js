@@ -22,6 +22,7 @@ import InCallManager from 'react-native-incall-manager';
 import {Endpoint} from 'react-native-pjsip';
 import DeviceInfo from 'react-native-device-info';
 import config from './utils/config';
+import { Notifications } from 'react-native-notifications';
 
 const calcVLCPlayerHeight = (windowWidth,aspetRatio) => {
   return windowWidth * aspetRatio;
@@ -31,9 +32,7 @@ export default function App({}) {
   const [type, setType] = useState('JOIN');
   const [stateEndpoint, setStateEndpoint] = useState();
   const [stateAccount, setStateAccount] = useState();
-  const [localStream, setLocalStream] = useState();
   const [localMicOn, setLocalMicOn] = useState(true);
-  const [remoteStream, setRemoteStream] = useState();
   const [callerId, setCallerId] = useState();
   const [callerName, setCallerName] = useState();
   const [callReceivedEvent, setCallReceivedEvent] = useState();
@@ -41,7 +40,7 @@ export default function App({}) {
 
   const endpoint = new Endpoint();
 
-  const createAccount = async () => {
+  const initApp = async () => {
     let deviceId = await DeviceInfo.getUniqueId();
     
     let configuration = {
@@ -58,31 +57,6 @@ export default function App({}) {
       android: `;im-type=sip`,
       transport: "UDP",
       codecs: ["opus", "PCMU", "G729", "PCMA"]
-      // iceServers: [
-      //   {
-      //     urls: "stun:stun.relay.metered.ca:80",
-      //   },
-      //   {
-      //     urls: "turn:standard.relay.metered.ca:80",
-      //     username: "011b39ba3691894935229948",
-      //     credential: "fzlWLcdYaT5mtQRx",
-      //   },
-      //   {
-      //     urls: "turn:standard.relay.metered.ca:80?transport=tcp",
-      //     username: "011b39ba3691894935229948",
-      //     credential: "fzlWLcdYaT5mtQRx",
-      //   },
-      //   {
-      //     urls: "turn:standard.relay.metered.ca:443",
-      //     username: "011b39ba3691894935229948",
-      //     credential: "fzlWLcdYaT5mtQRx",
-      //   },
-      //   {
-      //     urls: "turn:standard.relay.metered.ca:443?transport=tcp",
-      //     username: "011b39ba3691894935229948",
-      //     credential: "fzlWLcdYaT5mtQRx",
-      //   },
-      // ],
     };
     
 
@@ -123,7 +97,7 @@ export default function App({}) {
   }
 
   useEffect(() => {
-    createAccount();
+    initApp();
   }, []);
 
   useEffect(() => {
@@ -191,6 +165,96 @@ export default function App({}) {
       statusCode: 200,
     });
   };
+
+  Notifications.registerRemoteNotifications();
+
+  Notifications.events().registerNotificationReceivedForeground((notification, completion) => {
+    console.log(`Notification received in foreground: ${notification.title} : ${notification.body}`);
+    completion({alert: false, sound: false, badge: false});
+  });
+
+  Notifications.events().registerNotificationOpened((notification, completion) => {
+    console.log(`Notification opened: ${notification.payload}`);
+    completion();
+  });
+
+  const sendCallNotification = (callerName) => {
+    Notifications.setNotificationChannel({
+      channelId: 'call-channel',
+      name: 'Call Channel',
+      importance: 5,
+      description: 'Call Channel',
+      enableLights: true,
+      enableVibration: true,
+      groupId: 'call-group',
+      groupName: 'Call Group',
+      showBadge: true,
+      soundFile: 'call_custom.mp3',  // place this in <project_root>/android/app/src/main/res/raw/custom_sound.mp3
+      vibrationPattern: [200, 1000, 500, 1000, 500],
+  })
+    Notifications.postLocalNotification({
+      body: `Ligação de ${callerName}`,
+      title: 'Ligação',
+      sound: 'call_custom.mp3',
+      silent: false,
+      category: 'call',
+      userInfo: { },
+      fireDate: new Date().toISOString(),
+      isScheduled: false,
+      repeats: false,
+      channelId: 'call-channel',
+      threadId: 'call-thread',
+      smallIcon: 'ic_launcher',
+      largeIcon: 'ic_launcher',
+      groupId: 'call-group',
+      groupSummary: true,
+      autoClear: true,
+      number: 10,
+      color: '#0000FF',
+      notificationId: new Date().getTime().toString(),
+      attachments: [],
+      hasAction: true,
+      alertAction: 'view',
+      foreground: true,
+      userInteraction: true,
+      callback: null,
+      payload: null,
+      extra: null,
+      badgeCount: 0,
+      badge: false,
+      silent: false,
+      sound: 'call_custom.mp3',
+      vibrate: true,
+      vibration: 1000,
+      ignoreInForeground: false,
+      ignoreInActive: false,
+      ignoreWhenAppIsForeground: false,
+      ignoreWhenAppIsActive: false,
+      ignoreWhenAppIsBackground: false,
+      ignoreWhenAppIsInactive: false,
+      ignoreWhenAppIsClosed: false,
+      ignoreWhenAppIsKilled: false,
+      ignoreWhenAppIsPaused: false,
+      ignoreWhenAppIsBackgroundRestricted: false,
+      ignoreWhenDeviceIsLocked: false,
+      ignoreWhenDeviceIsSleeping: false,
+      ignoreWhenDeviceIsDozing: false,
+      ignoreWhenDeviceIsDriving: false,
+      ignoreWhenDeviceIsRunning: false,
+      ignoreWhenDeviceIsNotRunning: false,
+      ignoreWhenDeviceIsNotSleeping: false,
+      ignoreWhenDeviceIsNotDozing: false,
+      ignoreWhenDeviceIsNotDriving: false,
+      ignoreWhenDeviceIsNotIdle: false,
+      ignoreWhenDeviceIsNotLocked: false,
+      ignoreWhenDeviceIsNotActive: false,
+      ignoreWhenDeviceIsNotForeground: false,
+      ignoreWhenDeviceIsNotBackground: false,
+      ignoreWhenDeviceIsNotRestricted: false,
+      ignoreWhenDeviceIsNotPaused: false,
+      ignoreWhenDeviceIsNotKilled: false
+    });
+};
   
 
   endpoint.on('registration_changed', (event) => {
@@ -203,6 +267,8 @@ export default function App({}) {
     setCallerName(event._remoteName);
     setCallReceivedEvent(event);
     
+    sendCallNotification(event._remoteName);
+
     setType('INCOMING_CALL');
   });
 
@@ -469,19 +535,6 @@ export default function App({}) {
       </View>
     );
   };
-
-  function toggleMic() {
-    localMicOn ? setLocalMicOn(false) : setLocalMicOn(true);
-    localStream.getAudioTracks().forEach(track => {
-      localMicOn ? (track.enabled = false) : (track.enabled = true);
-    });
-  }
-
-  // function leave() {
-  //   peerConnection.current.close();
-  //   setLocalStream(null);
-  //   setType('JOIN');
-  // }
 
   const WebrtcRoomScreen = () => {
     return (

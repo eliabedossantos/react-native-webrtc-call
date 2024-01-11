@@ -25,6 +25,8 @@ target 'WebRTCExample' do
 
   pod 'ReactNativeIncallManager', :path => '../node_modules/react-native-incall-manager'
 
+  pod 'react-native-notifications', :path => '../node_modules/react-native-notifications'
+
   target 'WebRTCExampleTests' do
     inherit! :complete
     # Pods for testing

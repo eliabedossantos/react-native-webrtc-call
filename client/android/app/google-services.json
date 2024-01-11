@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "181418520021",
+    "project_id": "webrtcexample-d8a0a",
+    "storage_bucket": "webrtcexample-d8a0a.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:181418520021:android:8ea48f3a5cfd01f4c4615c",
+        "android_client_info": {
+          "package_name": "com.webrtcexample"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDw8jr1jt6hRH_UGJ42jQTGd51PPF56xZA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
