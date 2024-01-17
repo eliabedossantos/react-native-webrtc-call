@@ -273,6 +273,7 @@ dependencies {
     implementation project(':react-native-incall-manager')
     implementation project(':react-native-full-screen-notification-incoming-call')
     implementation project(':react-native-notifications')
+    implementation project(':react-native-background-actions')
     implementation "com.facebook.react:react-native:+"
     implementation "com.google.firebase:firebase-core:16.0.0"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.0.0"

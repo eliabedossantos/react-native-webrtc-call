@@ -23,7 +23,9 @@ import {Endpoint} from 'react-native-pjsip';
 import DeviceInfo from 'react-native-device-info';
 import config from './utils/config';
 import RNNotificationCall from 'react-native-full-screen-notification-incoming-call';
-
+import BackgroundService from 'react-native-background-actions';
+import { initVoip } from './services/Voip';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const calcVLCPlayerHeight = (windowWidth,aspetRatio) => {
   return windowWidth * aspetRatio;
 };
@@ -40,64 +42,42 @@ export default function App({}) {
 
   const endpoint = new Endpoint();
 
-  const initApp = async () => {
-    let deviceId = await DeviceInfo.getUniqueId();
-    
-    let configuration = {
-      name: "Tester",
-      username: config.user,
-      password: config.password,
-      domain: config.voipHost,
-      proxy: null,
-      regHeaders: {
-        "X-Custom-Header": "Value",
-      },
-      regContactParams: `;unique-device-token-id=${deviceId}`,
-      regOnAdd: false,
-      android: `;im-type=sip`,
-      transport: "UDP",
-      codecs: ["opus", "PCMU", "G729", "PCMA"]
-    };
-    
+  const sleep = (time) => new Promise((resolve) => setTimeout(() => resolve(), time));
 
-    const state = await endpoint.start({
-      service: {
-        ua: Platform.select({ios: "RnSIP iOS", android: "RnSIP Android"})
-      },
-      network: {
-        useWifi: true,
-        useOtherNetworks: true,
-      }
-    }).then((state) => {
-      console.log('state', state);
-      setStateEndpoint(state);
-      // state.accounts.forEach((account) => {
-      //   endpoint.deleteAccount(account).then((account) => {
-      //     console.log('account', account);
-      //   }).catch((error) => {
-      //     console.log('error', error);
-      //   })
-      // });
-      return state;
-    }).catch((error) => {
-      console.log('error', error);
-    })
-  
-    const account = await endpoint.createAccount(configuration).then((account) => {
-      console.log('account', account);
-        setTimeout(() => {
-          endpoint.registerAccount(account, true);
-      }, 10000);
-      setStateAccount(account);
-      return account;
-    }).catch((error) => {
-      console.log('error', error);
-    })
+  const veryIntensiveTask = async (taskDataArguments) => {
+    // Example of an infinite loop task
+    const { delay } = taskDataArguments;
+    await new Promise( async (resolve) => {
+        for (let i = 0; BackgroundService.isRunning(); i++) {
+            initVoip();
+            await sleep(delay);
+        }
+        
+    });
+  };
 
-  }
+  let currentCall = {}
+
+
+
+  const options = {
+    taskName: 'Voip',
+    taskTitle: 'Voip BHS',
+    taskDesc: 'BHS em execução',
+    taskIcon: {
+        name: 'ic_launcher',
+        type: 'mipmap',
+    },
+    color: '#ff00ff',
+    linkingURI: 'yourSchemeHere://chat/jane', // See Deep Linking for more info
+    parameters: {
+      delay: 20000,
+    },
+};
 
   useEffect(() => {
-    initApp();
+    console.log('startBackgroundService');
+    BackgroundService.start(veryIntensiveTask, options);
   }, []);
 
   useEffect(() => {
@@ -117,7 +97,6 @@ export default function App({}) {
     endpoint.answerCall(callReceivedEvent, {
       statusCode: 200,
     });
-
   };
 
   const rejectCall = () => {
@@ -128,37 +107,6 @@ export default function App({}) {
     setType('JOIN');
   };
 
-  const processCall = async () => {
-    // Fazer a chamada
-    const call = await endpoint.makeCall(
-      stateAccount,
-      '91003',
-      {
-        videoEnabled: false,
-        audioEnabled: true,
-        sendInitialVideo: false,
-        sendInitialAudio: true,
-      },
-      {
-        statusCode: 200,
-      },
-    );
-  };
-
-  const processAccept = async () => { 
-    // Aceitar a chamada
-    endpoint.answerCall(callReceivedEvent, {
-      statusCode: 200,
-    });
-  }
-
-  const processReject = async () => {
-    // Rejeitar a chamada
-    endpoint.answerCall(callReceivedEvent, {
-      statusCode: 486,
-    });
-  }
-
   const leave = async () => {
     // Desligar a chamada
     endpoint.hangupCall(callReceivedEvent, {
@@ -166,111 +114,50 @@ export default function App({}) {
     });
   };
 
-
-  const sendCallNotification = (callUid, callerName) => {
-    RNNotificationCall.displayNotification(
-      callUid,
-      null,
-      30000,
-      {
-        channelId: 'com.linhvo.rnnotificationcall',
-        channelName: 'RNNotificationCall',
-        notificationIcon: 'ic_launcher', //mipmap
-        notificationTitle: callerName ? callerName : 'sem nome',
-        notificationBody: 'Ligando...',
-        answerText: 'Atender',
-        declineText: 'Desligar',
-        notificationColor: 'colorAccent',
-        notificationSound: 'ringtone',
-        // payload:{
-        //   name: callerName ? callerName : 'sem nome',
-        //   Body: 'Ligando...',
-        // }
-      }
-    );
-  };
   
-
   useEffect(() => {
-    // Defina as funções de retorno de chamada
-    const endCallHandler = (data) => {
+    let testAsyncStorage = async () => {
+      try {
+        const value1 = await AsyncStorage.getItem('@voipApp:endpoint')
+        const value2 = await AsyncStorage.getItem('@voipApp:callStatus')
+        const value3 = await AsyncStorage.getItem('@voipApp:callEvent')
+        setCallReceivedEvent(JSON.parse(value3));
+        console.log('value1', value1);
+        console.log('value2', value2);
+        console.log('value3', value3);
+      } catch(e) {
+        // error reading value
+      }
+    }
+    testAsyncStorage();
+  }, []);
+  
+  useEffect(() => {
+
+    const handleAnswer = (data) => {
+      RNNotificationCall.backToApp();
+      const { callUUID, payload } = data;
+      console.log('press answer', callUUID);
+      acceptCall();
+      // Sua lógica adicional para lidar com o evento 'answer'
+    };
+
+    const handleEndCall = (data) => {
       const { callUUID, endAction, payload } = data;
       console.log('press endCall', callUUID);
       leave();
+      // Sua lógica adicional para lidar com o evento 'endCall'
     };
-  
-    const answerCallHandler = (data) => {
-      const { callUUID, endAction, payload } = data;
-      console.log('press answerCall', callUUID);
-      acceptCall();
-    };
-  
-    // Adicione os ouvintes usando as funções de retorno de chamada
-    RNNotificationCall.addEventListener('endCall', endCallHandler);
-    RNNotificationCall.addEventListener('answerCall', answerCallHandler);
-  
-    // Remova os ouvintes usando as mesmas funções de retorno de chamada
+
+    RNNotificationCall.addEventListener('answer', handleAnswer);
+    RNNotificationCall.addEventListener('endCall', handleEndCall);
+
     return () => {
-      RNNotificationCall.removeEventListener('endCall', endCallHandler);
-      RNNotificationCall.removeEventListener('answerCall', answerCallHandler);
+      // Limpar event listeners ao desmontar o componente
+      RNNotificationCall.removeEventListener('answer');
+      RNNotificationCall.removeEventListener('endCall');
     };
-  }, []);
-
-  endpoint.on('registration_changed', (event) => {
-    // console.log('registration_changed', event);
-  });
-
-  endpoint.on('call_received', (event) => {
-    setCallerId(event._callId);
-    setCallerName(event._remoteName);
-    setCallReceivedEvent(event);
-    
-    sendCallNotification(event._callId, event._remoteName);
-
-    setType('INCOMING_CALL');
-  });
-
-
-
-
-  endpoint.on('call_changed', (event) => {
-    // console.log('call_changed', event);
-    switch (event.getState()) {
-      case 'PJSIP_INV_STATE_CALLING':
-        console.log('PJSIP_INV_STATE_CALLING', event.getState());
-        break;
-      case 'PJSIP_INVSTATE_CONFIRMED':
-        console.log('PJSIP_INVSTATE_CONFIRMED', event.getState());
-        
-        setType('WEBRTC_ROOM');
-        break;
-        case 'PJSIP_INV_STATE_DISCONNECTED':
-          console.log('PJSIP_INV_STATE_DISCONNECTED', event.getState());
-          setType('JOIN');
-          break;
-          case 'PJSIP_INV_STATE_EARLY':
-            console.log('PJSIP_INV_STATE_EARLY', event.getState());
-            break;
-          case 'PJSIP_INV_STATE_CONNECTING':
-            RNNotificationCall.hideNotification();
-        console.log('PJSIP_INV_STATE_CONNECTING', event.getState());
-        break;
-      default:
-        break;
-    }
-  });
-
-  endpoint.on('call_terminated', (event) => {
-    console.log('call_terminated', event);
-
-    if (event.getState() === 'PJSIP_INV_STATE_DISCONNECTED') {
-      console.log('PJSIP_INV_STATE_DISCONNECTED', event.getState());
-   
-      RNNotificationCall.hideNotification();
-      setType('JOIN');
-    }
-  });
-
+  }, []); // O segundo argumento vazio indica que este efeito só é executado uma vez, equivalente ao componentDidMount
 
 
   const JoinScreen = () => {
@@ -317,7 +204,7 @@ export default function App({}) {
               </View>
             </View>
 
-            {/* <View
+            <View
               style={{
                 backgroundColor: '#1A1C22',
                 padding: 40,
@@ -332,7 +219,7 @@ export default function App({}) {
                 }}>
                 Insira o Ramal de Destino
               </Text> 
-              <TextInputContainer
+              {/* <TextInputContainer
                 placeholder={'Ramal'}
                 value={otherUserId.current}
                 setValue={text => {
@@ -340,11 +227,12 @@ export default function App({}) {
                   console.log('TEST', otherUserId.current);
                 }}
                 keyboardType={'number-pad'}
-              />
+              /> */}
               <TouchableOpacity
                 onPress={() => {
-                  setType('OUTGOING_CALL');
-                  processCall();
+                  // setType('OUTGOING_CALL');
+                  // processCall();
+                  BackgroundService.stop();
                 }}
                 style={{
                   height: 50,
@@ -359,10 +247,10 @@ export default function App({}) {
                     fontSize: 16,
                     color: '#FFFFFF',
                   }}>
-                  Ligar agora
+                 parar
                 </Text>
               </TouchableOpacity>
-            </View>  */}
+            </View> 
           </>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>

@@ -1,4 +1,6 @@
 rootProject.name = 'WebRTCExample'
+include ':react-native-background-actions'
+project(':react-native-background-actions').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-background-actions/android')
 include ':react-native-full-screen-notification-incoming-call'
 project(':react-native-full-screen-notification-incoming-call').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-full-screen-notification-incoming-call/android')
 include ':react-native-notifications'

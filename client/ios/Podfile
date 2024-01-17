@@ -29,6 +29,8 @@ target 'WebRTCExample' do
 
   pod 'react-native-full-screen-notification-incoming-call', :path => '../node_modules/react-native-full-screen-notification-incoming-call'
 
+  pod 'react-native-background-actions', :path => '../node_modules/react-native-background-actions'
+
   target 'WebRTCExampleTests' do
     inherit! :complete
     # Pods for testing

@@ -4,6 +4,7 @@ import android.app.Application;
 import android.content.Context;
 import com.facebook.react.PackageList;
 import com.facebook.react.ReactApplication;
+import com.asterinet.react.bgactions.BackgroundActionsPackage;
 import com.reactnativefullscreennotificationincomingcall.FullScreenNotificationIncomingCallPackage;
 import com.wix.reactnativenotifications.RNNotificationsPackage;
 import com.zxcpoiu.incallmanager.InCallManagerPackage;
@@ -31,6 +32,7 @@ public class MainApplication extends Application implements ReactApplication {
           @SuppressWarnings("UnnecessaryLocalVariable")
           List<ReactPackage> packages = new PackageList(this).getPackages();
           
+          new BackgroundActionsPackage();
           return packages;
         }
 
